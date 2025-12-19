@@ -1,0 +1,11 @@
+apiVersion: 1
+providers:
+  - name: 'template-dashboards'
+    orgId: 1
+    folder: 'Template'                 # Grafana 내 폴더명
+    type: file
+    disableDeletion: false
+    allowUiUpdates: true
+    updateIntervalSeconds: 10
+    options:
+      path: /var/lib/grafana/dashboards

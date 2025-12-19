@@ -1,0 +1,35 @@
+global:
+  scrape_interval: 15s
+
+scrape_configs:
+#  - job_name: 'kitpage-app'
+#    metrics_path: '/actuator/prometheus'
+#    static_configs:
+#      - targets: ['host.docker.internal:8080']  # 예: localhost에서 동작 중인 앱
+#  - job_name: 'otel-collector'
+#    static_configs:
+#      - targets: [ 'otel-collector:8888' ]
+  - job_name: "redis"
+    static_configs:
+      - targets: [ "dev-redis-exporter:9121" ]
+        labels:
+          service_name: "redis"
+          env: "local"
+
+  - job_name: "kafka-jmx"
+    static_configs:
+      - targets: [ "dev-kafka:9404" ]
+        labels:
+          service_name: "kafka"
+          env: "local"
+
+  # 컨슈머 lag용 (kafka_exporter 추가 권장)
+  - job_name: "kafka-exporter"
+    static_configs:
+      - targets: [ "kafka-exporter:9308" ]
+        labels:
+          service_name: "kafka"
+          env: "local"
+
+remote_write:
+  - url: http://mimir:9009/api/v1/push

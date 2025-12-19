@@ -1,0 +1,36 @@
+multitenancy_enabled: false
+
+server:
+  http_listen_port: 9009
+
+distributor:
+  ring:
+    kvstore:
+      store: inmemory
+
+ingester:
+  ring:
+    kvstore:
+      store: inmemory
+    replication_factor: 1
+
+blocks_storage:
+  backend: filesystem
+  filesystem:
+    dir: /data/tsdb
+
+compactor:
+  data_dir: /data/compactor            # ← working_directory 대신
+  sharding_ring:
+    kvstore:
+      store: inmemory
+
+ruler:
+  enable_api: true
+  rule_path: /data/rules               # ← storage.* 대신 로컬 경로 지정
+
+limits:
+  ingestion_rate: 1000000
+  ingestion_burst_size: 2000000
+  max_global_series_per_user: 0
+  max_global_series_per_metric: 0

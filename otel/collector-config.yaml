@@ -1,0 +1,144 @@
+extensions:
+  health_check:
+  pprof:
+
+receivers:
+  otlp:
+    protocols:
+      grpc:
+        endpoint: "0.0.0.0:4317"
+      http:
+        endpoint: "0.0.0.0:4318"
+  prometheus:
+    config:
+      scrape_configs:
+        - job_name: "spring"
+          static_configs:
+            - targets: [ "APP_HOST:8080" ]  # /actuator/prometheus
+        - job_name: "python"
+          static_configs:
+            - targets: [ "APP_HOST:8000" ]  # /metrics (prometheus_client)
+
+processors:
+  memory_limiter:
+    check_interval: 5s
+    limit_percentage: 85
+    spike_limit_percentage: 25
+  batch:
+    send_batch_size: 200
+    timeout: 1s
+  resource/sanitize_long_labels:
+    attributes:
+      - key: process.command_args
+        action: delete
+      - key: process.command_line
+        action: delete
+      - key: process.executable.path
+        action: delete
+      - key: process.command
+        action: delete
+  deltatocumulative: {}
+  attributes/loki_hints:
+    actions:
+      - key: service_name
+        from_attribute: service.name
+        action: upsert
+      # 리소스 라벨로 올릴 키들(스트림 라벨)
+      - key: loki.resource.labels
+        action: upsert
+        value: service_name
+      # 로그 레코드(라인) 라벨로 올릴 키들
+      - key: loki.attribute.labels
+        action: upsert
+        value: http.method,http.target,log.severity_text,logger.name
+      - key: loki.format
+        action: upsert
+        value: text  # API가 application/json이면 json, 아니라면 text
+  transform/log_body_fix:
+    error_mode: ignore
+    log_statements:
+      - context: log
+        statements:
+          # body가 비었으면 우선순위대로 채움(모두 문자열/JSON 문자열 가정)
+          #- set(body, attributes["http.response.body"]) where body == nil and attributes["http.response.body"] != nil
+          #- set(body, attributes["http.request.body"])  where body == nil and attributes["http.request.body"] != nil
+          - set(body, attributes["message"])            where body == nil and attributes["message"] != nil
+          - set(body, attributes["msg"])                where body == nil and attributes["msg"] != nil
+          - set(body, attributes["log"])                where body == nil and attributes["log"] != nil
+  transform/strip_huge_attrs:
+    error_mode: ignore
+    log_statements:
+      - context: log
+        statements:
+          - delete_key(attributes, "http.request.body")
+          - delete_key(attributes, "http.response.body")
+          - delete_key(attributes, "request.body")
+          - delete_key(attributes, "response.body")
+  filter/drop:
+    traces:
+      span:
+        - attributes["http.route"] == "/actuator/prometheus"
+        - attributes["http.route"] == "/actuator/health"
+  filter/drop_logs:
+    logs:
+      log_record:
+        # exact match
+        - 'attributes["http.target"] == "/actuator/prometheus"'
+        - 'attributes["http.route"]  == "/actuator/prometheus"'
+        - 'attributes["http.target"] == "/actuator/health"'
+        - 'attributes["http.route"]  == "/actuator/health"'
+
+        # 쿼리스트링 등 변형 포함(예: /actuator/prometheus?x=1)
+        - 'attributes["http.target"] != nil and IsMatch(attributes["http.target"], "^/actuator/(prometheus|health)(\\?.*)?$")'
+        - 'attributes["http.route"]  != nil and IsMatch(attributes["http.route"],  "^/actuator/(prometheus|health)(\\?.*)?$")'
+
+        # 본문 문자열에만 경로가 찍히는 경우까지 커버
+        - 'IsString(body) and IsMatch(body, "/actuator/(prometheus|health)")'
+
+exporters:
+  otlp/tempo:
+    endpoint: tempo:4317
+    tls:
+      insecure: true
+    retry_on_failure:
+      enabled: true
+    sending_queue:
+      enabled: true
+      num_consumers: 2
+      queue_size: 20480
+  otlphttp/loki:
+    endpoint: http://loki:3100/otlp
+    compression: gzip
+    # auth_enabled:true 환경이면 테넌트 지정
+    # headers:
+    #   X-Scope-OrgID: default
+    retry_on_failure:
+      enabled: true
+      max_elapsed_time: 5m
+    sending_queue:
+      enabled: true
+      num_consumers: 2
+      queue_size: 10000
+  prometheusremotewrite/mimir:
+    endpoint: http://mimir:9009/api/v1/push
+    resource_to_telemetry_conversion:
+      enabled: true  # service.name 등 리소스 → 라벨 승격
+
+
+service:
+  extensions: [ health_check, pprof ]
+  telemetry:
+    logs: { level: debug }  # 초기 확인용. 안정화 후 info로
+  pipelines:
+    metrics:
+      receivers: [ otlp ]
+      processors: [ resource/sanitize_long_labels, deltatocumulative, batch ]
+      exporters: [ prometheusremotewrite/mimir ]
+    traces:
+      receivers: [ otlp ]
+      processors: [ filter/drop, memory_limiter, batch ]
+      exporters: [ otlp/tempo ]
+    logs:
+      receivers: [ otlp ]
+      processors: [ memory_limiter, filter/drop_logs, attributes/loki_hints, transform/log_body_fix, batch ]
+      exporters: [ otlphttp/loki ]

@@ -1,0 +1,131 @@
+version: "3.8"
+
+services:
+  prometheus:
+    image: prom/prometheus:latest
+    container_name: prometheus
+    ports:
+      - "9090:9090"
+    volumes:
+      - ./prometheus/prometheus.yml:/etc/prometheus/prometheus.yml:ro
+      - ./prometheus/data:/prometheus
+    command:
+      - "--config.file=/etc/prometheus/prometheus.yml"
+      - "--storage.tsdb.retention.time=2d"
+    restart: unless-stopped
+    depends_on:
+      mimir:
+        condition: service_started
+    networks: [dev-net]
+
+  tempo:
+    image: grafana/tempo:latest
+    environment:
+      - AWS_ACCESS_KEY_ID=${AWS_ACCESS_KEY_ID}
+      - AWS_SECRET_ACCESS_KEY=${AWS_SECRET_ACCESS_KEY}
+      - AWS_REGION=ap-northeast-2
+    container_name: tempo
+    ports:
+      - "3200:3200"  # Tempo API/Query
+      - "4317:4317"  # OTLP gRPC
+      - "4318:4318"  # OTLP HTTP
+    volumes:
+      - ./tempo/tempo.yaml:/etc/tempo.yaml:ro
+      - ./tempo/data:/tmp/tempo
+      - ./tempo/metrics:/tmp/tempo/metrics-generator
+    command:
+      - "-config.file=/etc/tempo.yaml"
+    restart: unless-stopped
+    healthcheck:
+      test: [ "CMD", "wget", "-qO-", "http://localhost:3200/metrics" ]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+    networks:
+      - dev-net
+
+  otel-collector:
+    image: otel/opentelemetry-collector-contrib:0.131.0
+    container_name: otel-collector
+    ports:
+      - "14317:4317" # gRPC
+      - "14318:4318" # HTTP
+    volumes:
+      - ./otel/collector-config.yaml:/etc/otelcol/config.yaml:ro
+    command : ["--config=/etc/otelcol/config.yaml" ]
+    restart: unless-stopped
+    depends_on:
+      tempo:
+        condition: service_healthy
+    networks:
+      - dev-net
+
+  loki:
+    image: grafana/loki:latest
+    environment:
+      - AWS_ACCESS_KEY_ID=${AWS_ACCESS_KEY_ID}
+      - AWS_SECRET_ACCESS_KEY=${AWS_SECRET_ACCESS_KEY}
+      - AWS_REGION=ap-northeast-2
+    container_name: loki
+    ports: [ "3100:3100" ]
+    volumes:
+      - ./loki/config.yml:/etc/loki/config.yml:ro
+      - ./loki/data:/loki
+    command: [ "-config.file=/etc/loki/config.yml" ]
+    restart: unless-stopped
+    healthcheck:
+      test: [ "CMD", "wget", "-qO-", "http://localhost:3100/ready" ]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+    networks:
+      - dev-net
+
+  mimir:
+    image: grafana/mimir:latest
+    container_name: mimir
+    ports: [ "9009:9009" ] # HTTP API
+    volumes:
+      - ./mimir/config.yml:/etc/mimir/config.yml:ro
+      - ./mimir/data:/data
+    command: [ "-config.file=/etc/mimir/config.yml" ]
+    restart: unless-stopped
+    networks:
+      - dev-net
+
+  grafana:
+    image: grafana/grafana:latest
+    environment:
+      - GF_SECURITY_ADMIN_USER=admin
+      - GF_SECURITY_ADMIN_PASSWORD=admin
+    container_name: grafana
+    ports:
+      - "3000:3000"
+    volumes:
+#      - ./grafana/data:/var/lib/grafana
+#      - ./grafana/provisioning/datasources:/etc/grafana/provisioning/datasources
+      - grafana-data:/var/lib/grafana
+      # 데이터소스 프로비저닝
+      - ./grafana/provisioning/datasources:/etc/grafana/provisioning/datasources:ro
+      # 대시보드 프로비저닝 정의 파일 마운트
+      - ./grafana/provisioning/dashboards:/etc/grafana/provisioning/dashboards:ro
+      # 실제 대시보드 JSON들이 들어갈 디렉터리
+      - ./grafana/dashboards:/var/lib/grafana/dashboards:ro
+    restart: unless-stopped
+    depends_on:
+      loki:
+        condition: service_healthy
+      tempo:
+        condition: service_healthy
+      mimir:
+        condition: service_started
+    networks:
+      - dev-net
+
+volumes:
+  grafana-data: {}
+
+networks:
+  dev-net:
+    external: true
+    name: dev-net

@@ -1,0 +1,51 @@
+auth_enabled: false
+
+server:
+  http_listen_port: 3200
+
+distributor:
+  receivers:
+    otlp:
+      protocols:
+        grpc:
+          endpoint: 0.0.0.0:4317
+        http:
+          endpoint: 0.0.0.0:4318
+
+ingester:
+  trace_idle_period: 10s
+  max_block_duration: 5m
+
+compactor:
+  compaction:
+    # 보존 기간은 S3 Lifecycle로 관리하는 것을 권장하지만,
+    # 간단히 데모 용으로 짧게 유지하려면 아래 retention 옵션을 사용
+    block_retention: 24h
+
+storage:
+  trace:
+    backend: s3
+    s3:
+      bucket: muzlive-loki-chunks
+      region: ap-northeast-2
+      endpoint: s3.ap-northeast-2.amazonaws.com
+      prefix: tempo-prod/
+      # 기본 AWS S3라면 endpoint 생략 가능. MinIO 등 사용 시 지정:
+      # endpoint: http://minio:9000
+      # force_path_style: true   # MinIO/일부 S3 호환 스토리지에 필요
+      # insecure: true           # http endpoint 사용 시
+      # 자격 증명은 환경변수(AWS_ACCESS_KEY_ID/AWS_SECRET_ACCESS_KEY) 권장
+      # access_key: xxx
+      # ecret_key: yyy
+#    wal:
+#      path: /var/tempo/wal   # WAL은 로컬 디스크 필요
+query_frontend:
+  max_outstanding_per_tenant: 2048
+
+metrics_generator:
+  processor:
+    service_graphs: {}
+    span_metrics:
+      dimensions: [http.method, http.target, http.status_code]
+  storage:
+    path: /tmp/tempo/metrics-generator
