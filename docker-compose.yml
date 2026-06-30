@@ -17,6 +17,10 @@ services:
       mimir:
         condition: service_started
     networks: [dev-net]
+    deploy:
+      resources:
+        limits:
+          memory: 256m
 
   tempo:
     image: grafana/tempo:latest
@@ -43,6 +47,10 @@ services:
       retries: 10
     networks:
       - dev-net
+    deploy:
+      resources:
+        limits:
+          memory: 512m
 
   otel-collector:
     image: otel/opentelemetry-collector-contrib:0.131.0
@@ -59,6 +67,10 @@ services:
         condition: service_healthy
     networks:
       - dev-net
+    deploy:
+      resources:
+        limits:
+          memory: 150m
 
   loki:
     image: grafana/loki:latest
@@ -80,6 +92,10 @@ services:
       retries: 10
     networks:
       - dev-net
+    deploy:
+      resources:
+        limits:
+          memory: 1280m
 
   mimir:
     image: grafana/mimir:latest
@@ -92,6 +108,10 @@ services:
     restart: unless-stopped
     networks:
       - dev-net
+    deploy:
+      resources:
+        limits:
+          memory: 256m
 
   grafana:
     image: grafana/grafana:latest
@@ -121,6 +141,10 @@ services:
         condition: service_started
     networks:
       - dev-net
+    deploy:
+      resources:
+        limits:
+          memory: 256m
 
 volumes:
   grafana-data: {}

@@ -27,6 +27,15 @@ processors:
   batch:
     send_batch_size: 200
     timeout: 1s
+  redaction:
+    allow_all_keys: true
+    blocked_values:
+      # Email
+      - "[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\\.[a-zA-Z]{2,}"
+      # Credit Card (Simple 16 digits)
+      - "\\d{4}[- ]?\\d{4}[- ]?\\d{4}[- ]?\\d{4}"
+      # KR RRN (Social Security Number)
+      - "\\d{6}-\\d{7}"
   resource/sanitize_long_labels:
     attributes:
       - key: process.command_args
@@ -74,6 +83,19 @@ processors:
           - delete_key(attributes, "http.response.body")
           - delete_key(attributes, "request.body")
           - delete_key(attributes, "response.body")
+  transform/mask_sensitive:
+    error_mode: ignore
+    log_statements:
+      - context: log
+        statements:
+          - set(attributes["access_token"], "****") where attributes["access_token"] != nil
+          - set(attributes["password"], "****") where attributes["password"] != nil
+          - set(attributes["authorization"], "****") where attributes["authorization"] != nil
+    trace_statements:
+      - context: span
+        statements:
+          - set(attributes["http.request.header.authorization"], "****") where attributes["http.request.header.authorization"] != nil
+          - set(attributes["db.connection_string"], "****") where attributes["db.connection_string"] != nil
   filter/drop:
     traces:
       span:
@@ -136,9 +158,9 @@ service:
       exporters: [ prometheusremotewrite/mimir ]
     traces:
       receivers: [ otlp ]
-      processors: [ filter/drop, memory_limiter, batch ]
+      processors: [ filter/drop, transform/mask_sensitive, redaction, memory_limiter, batch ]
       exporters: [ otlp/tempo ]
     logs:
       receivers: [ otlp ]
-      processors: [ memory_limiter, filter/drop_logs, attributes/loki_hints, transform/log_body_fix, batch ]
+      processors: [ memory_limiter, filter/drop_logs, transform/mask_sensitive, redaction, attributes/loki_hints, transform/log_body_fix, batch ]
       exporters: [ otlphttp/loki ]
