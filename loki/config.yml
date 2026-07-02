@@ -2,15 +2,11 @@ auth_enabled: false
 
 server:
   http_listen_port: 3100
-  grpc_server_max_recv_msg_size: 104857600   # 100MB
-  grpc_server_max_send_msg_size: 104857600
+  grpc_server_max_recv_msg_size: 33554432   # 32MB
+  grpc_server_max_send_msg_size: 33554432
 
 common:
-  path_prefix: /tmp/loki
-  storage:
-    filesystem:
-      chunks_directory: /tmp/loki/chunks
-      rules_directory: /tmp/loki/rules
+  path_prefix: /loki
   replication_factor: 1
   ring:
     instance_addr: 127.0.0.1
@@ -21,11 +17,11 @@ query_range:
   results_cache:
     cache:
       embedded_cache:
-        enabled: true  # 결과 캐시 활성화 여부
-        max_size_mb: 100  # 결과 캐시 최대 크기 (MB 단위)
+        enabled: true
+        max_size_mb: 50
 
 query_scheduler:
-  max_outstanding_requests_per_tenant: 2048  # 테넌트 당 최대 대기 중인 요청 수
+  max_outstanding_requests_per_tenant: 256
 
 schema_config:
   configs:
@@ -69,21 +65,20 @@ ruler:
     s3:
       bucketnames: muzlive-loki-chunks
       region: ap-northeast-2
-#      endpoint: s3.ap-northeast-2.amazonaws.com
-      s3forcepathstyle: true
+      s3forcepathstyle: false
       insecure: false
 
 limits_config:
-  retention_period: 744h  # 보존 기간: 데이터 보존 기간
-  ingestion_rate_mb: 50
-  ingestion_burst_size_mb: 100
-  max_line_size: 6291456
-  split_queries_by_interval: 24h  # 쿼리 구간별 분할: 쿼리 결과를 어떤 간격으로 분할할 지 여부
-  allow_structured_metadata: true # log 메타 데이터 허용 여부
+  retention_period: 744h
+  ingestion_rate_mb: 20
+  ingestion_burst_size_mb: 40
+  max_line_size: 1048576  # 1MB
+  split_queries_by_interval: 24h
+  allow_structured_metadata: true
 
 compactor:
-  working_directory: /tmp/loki/compactor  # 컴팩터 작업 디렉터리
-  delete_request_store: s3  # 공유 저장소: Amazon S3
-  compaction_interval: 10m  # 컴팩션 간격: 컴팩션 실행 간격
-  retention_enabled: true  # 보존 활성화 여부
-  retention_delete_delay: 2h  # 보존 삭제 지연: 삭제 전 대기 기간
+  working_directory: /loki/compactor
+  delete_request_store: s3
+  compaction_interval: 30m
+  retention_enabled: true
+  retention_delete_delay: 2h

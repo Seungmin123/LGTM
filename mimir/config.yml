@@ -15,22 +15,28 @@ ingester:
     replication_factor: 1
 
 blocks_storage:
-  backend: filesystem
-  filesystem:
-    dir: /data/tsdb
+  backend: s3
+  s3:
+    bucket_name: muzlive-loki-chunks
+    region: ap-northeast-2
+    endpoint: s3.ap-northeast-2.amazonaws.com
+    prefix: mimir-prod
+  tsdb:
+    dir: /data/tsdb  # ingester 로컬 WAL (단기 버퍼, 영속 불필요)
 
 compactor:
-  data_dir: /data/compactor            # ← working_directory 대신
+  data_dir: /data/compactor  # 컴팩션 임시 작업 디렉터리 (영속 불필요)
   sharding_ring:
     kvstore:
       store: inmemory
 
 ruler:
   enable_api: true
-  rule_path: /data/rules               # ← storage.* 대신 로컬 경로 지정
+  rule_path: /data/rules
 
 limits:
-  ingestion_rate: 1000000
-  ingestion_burst_size: 2000000
-  max_global_series_per_user: 0
-  max_global_series_per_metric: 0
+  ingestion_rate: 10000
+  ingestion_burst_size: 20000
+  max_global_series_per_user: 100000
+  max_global_series_per_metric: 5000
+  compactor_blocks_retention_period: 90d

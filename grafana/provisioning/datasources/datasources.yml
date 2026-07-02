@@ -10,7 +10,7 @@ datasources:
     jsonData:
       derivedFields:
         - name: trace_id
-          matcherRegex: 'trace_id=(\w+)'
+          matcherRegex: 'trace_id=([\w-]+)'
           url: '$${__value.raw}'
           datasourceUid: tempo-ds
 
@@ -30,7 +30,7 @@ datasources:
     jsonData:
       tracesToLogsV2:
         datasourceUid: loki-ds
-        spanStartTimeShift: '1h'
-        spanEndTimeShift: '1h'
+        spanStartTimeShift: '5m'
+        spanEndTimeShift: '5m'
         filterByTraceID: true
         filterBySpanID: false

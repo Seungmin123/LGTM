@@ -9,15 +9,15 @@ receivers:
         endpoint: "0.0.0.0:4317"
       http:
         endpoint: "0.0.0.0:4318"
-  prometheus:
-    config:
-      scrape_configs:
-        - job_name: "spring"
-          static_configs:
-            - targets: [ "APP_HOST:8080" ]  # /actuator/prometheus
-        - job_name: "python"
-          static_configs:
-            - targets: [ "APP_HOST:8000" ]  # /metrics (prometheus_client)
+  # prometheus:  # 실제 scrape 대상 호스트 확정 후 활성화
+  #   config:
+  #     scrape_configs:
+  #       - job_name: "spring"
+  #         static_configs:
+  #           - targets: [ "APP_HOST:8080" ]
+  #       - job_name: "python"
+  #         static_configs:
+  #           - targets: [ "APP_HOST:8000" ]
 
 processors:
   memory_limiter:
@@ -25,8 +25,8 @@ processors:
     limit_percentage: 85
     spike_limit_percentage: 25
   batch:
-    send_batch_size: 200
-    timeout: 1s
+    send_batch_size: 512
+    timeout: 2s
   redaction:
     allow_all_keys: true
     blocked_values:
@@ -127,20 +127,17 @@ exporters:
     sending_queue:
       enabled: true
       num_consumers: 2
-      queue_size: 20480
+      queue_size: 1000
   otlphttp/loki:
     endpoint: http://loki:3100/otlp
     compression: gzip
-    # auth_enabled:true 환경이면 테넌트 지정
-    # headers:
-    #   X-Scope-OrgID: default
     retry_on_failure:
       enabled: true
       max_elapsed_time: 5m
     sending_queue:
       enabled: true
       num_consumers: 2
-      queue_size: 10000
+      queue_size: 1000
   prometheusremotewrite/mimir:
     endpoint: http://mimir:9009/api/v1/push
     resource_to_telemetry_conversion:
@@ -150,7 +147,7 @@ exporters:
 service:
   extensions: [ health_check, pprof ]
   telemetry:
-    logs: { level: debug }  # 초기 확인용. 안정화 후 info로
+    logs: { level: info }
   pipelines:
     metrics:
       receivers: [ otlp ]
@@ -158,9 +155,9 @@ service:
       exporters: [ prometheusremotewrite/mimir ]
     traces:
       receivers: [ otlp ]
-      processors: [ filter/drop, transform/mask_sensitive, redaction, memory_limiter, batch ]
+      processors: [ memory_limiter, filter/drop, transform/mask_sensitive, redaction, batch ]
       exporters: [ otlp/tempo ]
     logs:
       receivers: [ otlp ]
-      processors: [ memory_limiter, filter/drop_logs, transform/mask_sensitive, redaction, attributes/loki_hints, transform/log_body_fix, batch ]
+      processors: [ memory_limiter, filter/drop_logs, transform/strip_huge_attrs, transform/mask_sensitive, redaction, attributes/loki_hints, transform/log_body_fix, batch ]
       exporters: [ otlphttp/loki ]

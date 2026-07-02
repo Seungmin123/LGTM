@@ -13,8 +13,8 @@ distributor:
           endpoint: 0.0.0.0:4318
 
 ingester:
-  trace_idle_period: 10s
-  max_block_duration: 5m
+  trace_idle_period: 30s
+  max_block_duration: 30m
 
 compactor:
   compaction:
@@ -30,15 +30,8 @@ storage:
       region: ap-northeast-2
       endpoint: s3.ap-northeast-2.amazonaws.com
       prefix: tempo-prod/
-      # 기본 AWS S3라면 endpoint 생략 가능. MinIO 등 사용 시 지정:
-      # endpoint: http://minio:9000
-      # force_path_style: true   # MinIO/일부 S3 호환 스토리지에 필요
-      # insecure: true           # http endpoint 사용 시
-      # 자격 증명은 환경변수(AWS_ACCESS_KEY_ID/AWS_SECRET_ACCESS_KEY) 권장
-      # access_key: xxx
-      # ecret_key: yyy
-#    wal:
-#      path: /var/tempo/wal   # WAL은 로컬 디스크 필요
+    wal:
+      path: /var/tempo/wal
 query_frontend:
   max_outstanding_per_tenant: 2048
 
@@ -49,3 +42,5 @@ metrics_generator:
       dimensions: [http.method, http.target, http.status_code]
   storage:
     path: /tmp/tempo/metrics-generator
+    remote_write:
+      - url: http://mimir:9009/api/v1/push
