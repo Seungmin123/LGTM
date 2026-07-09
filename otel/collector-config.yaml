@@ -96,6 +96,23 @@ processors:
         statements:
           - set(attributes["http.request.header.authorization"], "****") where attributes["http.request.header.authorization"] != nil
           - set(attributes["db.connection_string"], "****") where attributes["db.connection_string"] != nil
+  # 메트릭 라벨 카디널리티 억제: http.target의 가변 ID를 정규화하지 않으면
+  # 시리즈가 무한 증가해 mimir per-metric 제한(err-mimir-max-series-per-metric) 초과
+  transform/metrics_reduce_cardinality:
+    error_mode: ignore
+    metric_statements:
+      - context: datapoint
+        statements:
+          # 인스턴스 IP:port 라벨 제거 (컨테이너 재배포마다 값이 바뀌어 시리즈 증가)
+          - delete_key(attributes, "http.host")
+          # 쿼리스트링 제거
+          - replace_pattern(attributes["http.target"], "\\?.*$", "")
+          # 16자 이상 hex ID (예: sticker/3c321aa4...) → :id
+          - replace_pattern(attributes["http.target"], "[0-9a-fA-F]{16,}", ":id")
+          # 업무 ID (예: PROD_004169, M_PROD_003139_001_P) → :id
+          - replace_pattern(attributes["http.target"], "(?i)(m_)?prod_[0-9][0-9a-z_]*", ":id")
+          # 숫자로만 된 경로 세그먼트 → :id
+          - replace_pattern(attributes["http.target"], "/[0-9]+(/|$)", "/:id$$1")
   filter/drop:
     traces:
       span:
@@ -151,7 +168,7 @@ service:
   pipelines:
     metrics:
       receivers: [ otlp ]
-      processors: [ resource/sanitize_long_labels, deltatocumulative, batch ]
+      processors: [ resource/sanitize_long_labels, transform/metrics_reduce_cardinality, deltatocumulative, batch ]
       exporters: [ prometheusremotewrite/mimir ]
     traces:
       receivers: [ otlp ]
