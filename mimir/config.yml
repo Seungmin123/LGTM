@@ -23,6 +23,8 @@ blocks_storage:
     prefix: mimir-prod
   tsdb:
     dir: /data/tsdb  # ingester 로컬 WAL (단기 버퍼, 영속 불필요)
+    retention_period: 4h  # S3 업로드 완료된 로컬 블록 보관 시간 (기본 13h)
+    wal_compression_enabled: true
 
 compactor:
   data_dir: /data/compactor  # 컴팩션 임시 작업 디렉터리 (영속 불필요)

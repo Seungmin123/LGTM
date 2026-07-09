@@ -118,6 +118,7 @@ services:
       - AWS_REGION=ap-northeast-2
     volumes:
       - ./mimir/config.yml:/etc/mimir/config.yml:ro
+      - ./mimir/data:/data
     command: [ "-config.file=/etc/mimir/config.yml" ]
     restart: unless-stopped
     networks:
