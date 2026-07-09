@@ -37,8 +37,8 @@ ruler:
   rule_path: /data/rules
 
 limits:
-  ingestion_rate: 10000
-  ingestion_burst_size: 20000
+  ingestion_rate: 30000
+  ingestion_burst_size: 60000  # collector 큐 백로그 flush 시 429로 드롭되지 않도록 여유 확보
   max_global_series_per_user: 100000
   max_global_series_per_metric: 20000  # 히스토그램(버킷 라벨 le 곱연산) 감안. 전체 상한은 max_global_series_per_user가 담당
   compactor_blocks_retention_period: 90d
