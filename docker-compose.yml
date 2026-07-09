@@ -93,11 +93,7 @@ services:
       - ./loki/data:/loki
     command: [ "-config.file=/etc/loki/config.yml" ]
     restart: unless-stopped
-    healthcheck:
-      test: [ "CMD", "wget", "-qO-", "http://localhost:3100/ready" ]
-      interval: 5s
-      timeout: 3s
-      retries: 10
+    # healthcheck 없음: loki 3.x 이미지는 distroless라 wget/sh가 없어 컨테이너 내 검사 불가
     networks:
       - dev-net
     logging: *default-logging
@@ -160,7 +156,7 @@ services:
     restart: unless-stopped
     depends_on:
       loki:
-        condition: service_healthy
+        condition: service_started  # loki 3.x는 healthcheck 불가(distroless)
       tempo:
         condition: service_healthy
       mimir:
