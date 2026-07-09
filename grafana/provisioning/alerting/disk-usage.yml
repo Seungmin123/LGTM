@@ -1,0 +1,69 @@
+apiVersion: 1
+
+groups:
+  - orgId: 1
+    name: infra-alerts
+    folder: Infra
+    interval: 1m
+    rules:
+      - uid: disk-usage-high
+        title: EC2 루트 디스크 사용률 80% 초과
+        condition: C
+        for: 5m
+        noDataState: NoData
+        execErrState: Error
+        annotations:
+          summary: "루트 디스크 사용률이 80%를 넘었습니다. mimir/tempo/loki가 디스크 부족으로 죽기 전에 정리 또는 증설이 필요합니다."
+        labels:
+          severity: warning
+        data:
+          - refId: A
+            relativeTimeRange:
+              from: 300
+              to: 0
+            datasourceUid: mimir-ds
+            model:
+              refId: A
+              instant: true
+              expr: 100 * (1 - node_filesystem_avail_bytes{mountpoint="/",job="node"} / node_filesystem_size_bytes{mountpoint="/",job="node"})
+          - refId: C
+            datasourceUid: __expr__
+            model:
+              refId: C
+              type: threshold
+              expression: A
+              conditions:
+                - evaluator:
+                    type: gt
+                    params: [80]
+
+      - uid: mimir-container-mem-high
+        title: 모니터링 컨테이너 메모리 사용률 주의
+        condition: C
+        for: 10m
+        noDataState: NoData
+        execErrState: Error
+        annotations:
+          summary: "호스트 가용 메모리가 10% 미만입니다. 컨테이너 OOM 위험이 있습니다."
+        labels:
+          severity: warning
+        data:
+          - refId: A
+            relativeTimeRange:
+              from: 300
+              to: 0
+            datasourceUid: mimir-ds
+            model:
+              refId: A
+              instant: true
+              expr: 100 * node_memory_MemAvailable_bytes{job="node"} / node_memory_MemTotal_bytes{job="node"}
+          - refId: C
+            datasourceUid: __expr__
+            model:
+              refId: C
+              type: threshold
+              expression: A
+              conditions:
+                - evaluator:
+                    type: lt
+                    params: [10]
