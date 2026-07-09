@@ -16,11 +16,11 @@ ingester:
 
 blocks_storage:
   backend: s3
+  storage_prefix: mimir-prod  # 버킷 내 mimir 전용 경로 (s3.prefix는 존재하지 않는 필드)
   s3:
     bucket_name: muzlive-loki-chunks
     region: ap-northeast-2
     endpoint: s3.ap-northeast-2.amazonaws.com
-    prefix: mimir-prod
   tsdb:
     dir: /data/tsdb  # ingester 로컬 WAL (단기 버퍼, 영속 불필요)
     retention_period: 4h  # S3 업로드 완료된 로컬 블록 보관 시간 (기본 13h)
