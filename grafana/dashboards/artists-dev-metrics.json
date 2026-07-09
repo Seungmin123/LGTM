@@ -1,0 +1,453 @@
+{
+  "annotations": {
+    "list": []
+  },
+  "description": "artist-back APM 메트릭(OTel→Mimir). 요청률·에러율·지연·경로별 Top 30. 로그는 'Artists Dev — Logs' 대시보드 참조. ⚠ 메트릭/라벨 이름은 추정값 — 최초 데이터 유입 후 Explore→Mimir에서 실제 이름 확인 후 교정.",
+  "editable": true,
+  "graphTooltip": 1,
+  "id": null,
+  "links": [
+    {
+      "icon": "external link",
+      "targetBlank": false,
+      "title": "→ Logs 대시보드 (요청/에러 로그)",
+      "tooltip": "nginx·Django 요청/에러 로그",
+      "type": "link",
+      "url": "/d/artists-dev-logs"
+    }
+  ],
+  "panels": [
+    {
+      "datasource": {
+        "type": "prometheus",
+        "uid": "mimir-ds"
+      },
+      "description": "⚠ 메트릭/라벨 이름은 OTel→Mimir 변환 추정값입니다. 최초 데이터 유입 후 Explore→Mimir(Metrics browser)에서 실제 이름 확인 후 교체하세요.",
+      "fieldConfig": {
+        "defaults": {}
+      },
+      "gridPos": {
+        "h": 4,
+        "w": 6,
+        "x": 0,
+        "y": 0
+      },
+      "id": 1,
+      "options": {
+        "colorMode": "value",
+        "graphMode": "area",
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ]
+        }
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "mimir-ds"
+          },
+          "expr": "sum(rate(http_server_duration_milliseconds_count{service_name=\"artist-back\", deployment_environment=\"$env\"}[5m]))",
+          "refId": "A"
+        }
+      ],
+      "title": "요청률 (req/s)",
+      "type": "stat"
+    },
+    {
+      "datasource": {
+        "type": "prometheus",
+        "uid": "mimir-ds"
+      },
+      "description": "⚠ 메트릭/라벨 이름은 OTel→Mimir 변환 추정값입니다. 최초 데이터 유입 후 Explore→Mimir(Metrics browser)에서 실제 이름 확인 후 교체하세요.",
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "thresholds"
+          },
+          "thresholds": {
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              },
+              {
+                "color": "red",
+                "value": 0.01
+              }
+            ]
+          },
+          "unit": "percentunit"
+        }
+      },
+      "gridPos": {
+        "h": 4,
+        "w": 6,
+        "x": 6,
+        "y": 0
+      },
+      "id": 2,
+      "options": {
+        "colorMode": "background",
+        "graphMode": "area",
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ]
+        }
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "mimir-ds"
+          },
+          "expr": "sum(rate(http_server_duration_milliseconds_count{service_name=\"artist-back\", deployment_environment=\"$env\", http_status_code=~\"5..\"}[5m])) / sum(rate(http_server_duration_milliseconds_count{service_name=\"artist-back\", deployment_environment=\"$env\"}[5m]))",
+          "refId": "A"
+        }
+      ],
+      "title": "에러율 (5xx)",
+      "type": "stat"
+    },
+    {
+      "datasource": {
+        "type": "prometheus",
+        "uid": "mimir-ds"
+      },
+      "description": "⚠ 메트릭/라벨 이름은 OTel→Mimir 변환 추정값입니다. 최초 데이터 유입 후 Explore→Mimir(Metrics browser)에서 실제 이름 확인 후 교체하세요.",
+      "fieldConfig": {
+        "defaults": {
+          "unit": "ms"
+        }
+      },
+      "gridPos": {
+        "h": 4,
+        "w": 6,
+        "x": 12,
+        "y": 0
+      },
+      "id": 3,
+      "options": {
+        "colorMode": "value",
+        "graphMode": "area",
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ]
+        }
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "mimir-ds"
+          },
+          "expr": "histogram_quantile(0.95, sum by (le) (rate(http_server_duration_milliseconds_bucket{service_name=\"artist-back\", deployment_environment=\"$env\", http_method!=\"OPTIONS\"}[5m])))",
+          "refId": "A"
+        }
+      ],
+      "title": "지연 p95 (ms)",
+      "type": "stat"
+    },
+    {
+      "datasource": {
+        "type": "prometheus",
+        "uid": "mimir-ds"
+      },
+      "description": "⚠ 메트릭/라벨 이름은 OTel→Mimir 변환 추정값입니다. 최초 데이터 유입 후 Explore→Mimir(Metrics browser)에서 실제 이름 확인 후 교체하세요.",
+      "fieldConfig": {
+        "defaults": {
+          "unit": "ms"
+        }
+      },
+      "gridPos": {
+        "h": 4,
+        "w": 6,
+        "x": 18,
+        "y": 0
+      },
+      "id": 4,
+      "options": {
+        "colorMode": "value",
+        "graphMode": "area",
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ]
+        }
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "mimir-ds"
+          },
+          "expr": "histogram_quantile(0.50, sum by (le) (rate(http_server_duration_milliseconds_bucket{service_name=\"artist-back\", deployment_environment=\"$env\", http_method!=\"OPTIONS\"}[5m])))",
+          "refId": "A"
+        }
+      ],
+      "title": "지연 p50 (ms)",
+      "type": "stat"
+    },
+    {
+      "datasource": {
+        "type": "prometheus",
+        "uid": "mimir-ds"
+      },
+      "description": "⚠ 메트릭/라벨 이름은 OTel→Mimir 변환 추정값입니다. 최초 데이터 유입 후 Explore→Mimir(Metrics browser)에서 실제 이름 확인 후 교체하세요.",
+      "fieldConfig": {
+        "defaults": {
+          "custom": {
+            "drawStyle": "line",
+            "fillOpacity": 10
+          },
+          "unit": "ms"
+        }
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 0,
+        "y": 4
+      },
+      "id": 5,
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "mimir-ds"
+          },
+          "expr": "histogram_quantile(0.50, sum by (le) (rate(http_server_duration_milliseconds_bucket{service_name=\"artist-back\", deployment_environment=\"$env\", http_method!=\"OPTIONS\"}[5m])))",
+          "legendFormat": "p50",
+          "refId": "A"
+        },
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "mimir-ds"
+          },
+          "expr": "histogram_quantile(0.95, sum by (le) (rate(http_server_duration_milliseconds_bucket{service_name=\"artist-back\", deployment_environment=\"$env\", http_method!=\"OPTIONS\"}[5m])))",
+          "legendFormat": "p95",
+          "refId": "B"
+        }
+      ],
+      "title": "지연 추이 (p50 / p95, ms)",
+      "type": "timeseries"
+    },
+    {
+      "datasource": {
+        "type": "prometheus",
+        "uid": "mimir-ds"
+      },
+      "description": "⚠ 메트릭/라벨 이름은 OTel→Mimir 변환 추정값입니다. 최초 데이터 유입 후 Explore→Mimir(Metrics browser)에서 실제 이름 확인 후 교체하세요.",
+      "fieldConfig": {
+        "defaults": {
+          "custom": {
+            "drawStyle": "bars",
+            "fillOpacity": 70,
+            "stacking": {
+              "mode": "normal"
+            }
+          }
+        }
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 12,
+        "y": 4
+      },
+      "id": 6,
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "mimir-ds"
+          },
+          "expr": "sum by (http_status_code) (rate(http_server_duration_milliseconds_count{service_name=\"artist-back\", deployment_environment=\"$env\"}[5m]))",
+          "legendFormat": "{{http_status_code}}",
+          "refId": "A"
+        }
+      ],
+      "title": "상태코드별 요청률 (req/s)",
+      "type": "timeseries"
+    },
+    {
+      "datasource": {
+        "type": "prometheus",
+        "uid": "mimir-ds"
+      },
+      "description": "선택 기간($__range) 동안 경로(http_route)별 평균 응답시간 상위 30개. 평균 = rate(_sum)/rate(_count). ⚠ 메트릭/라벨 이름은 OTel→Mimir 변환 추정값 — 데이터 유입 후 http_route 라벨명 확인 후 교정.",
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "continuous-GrYlRd"
+          },
+          "custom": {
+            "align": "auto",
+            "cellOptions": {
+              "mode": "gradient",
+              "type": "color-background"
+            }
+          },
+          "unit": "ms"
+        }
+      },
+      "gridPos": {
+        "h": 12,
+        "w": 12,
+        "x": 0,
+        "y": 12
+      },
+      "id": 7,
+      "options": {
+        "showHeader": true,
+        "sortBy": [
+          {
+            "desc": true,
+            "displayName": "평균 응답시간(ms)"
+          }
+        ]
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "mimir-ds"
+          },
+          "expr": "topk(30, sum by (http_target, http_method) (rate(http_server_duration_milliseconds_sum{service_name=\"artist-back\", deployment_environment=\"$env\", http_method!=\"OPTIONS\"}[$__range])) / (sum by (http_target, http_method) (rate(http_server_duration_milliseconds_count{service_name=\"artist-back\", deployment_environment=\"$env\", http_method!=\"OPTIONS\"}[$__range])) > 0))",
+          "format": "table",
+          "instant": true,
+          "refId": "A"
+        }
+      ],
+      "title": "평균 응답시간 Top 30 (경로별)",
+      "transformations": [
+        {
+          "id": "organize",
+          "options": {
+            "excludeByName": {
+              "Time": true
+            },
+            "renameByName": {
+              "Value": "평균 응답시간(ms)",
+              "http_method": "메서드",
+              "http_target": "경로"
+            }
+          }
+        }
+      ],
+      "type": "table"
+    },
+    {
+      "datasource": {
+        "type": "prometheus",
+        "uid": "mimir-ds"
+      },
+      "description": "선택 기간($__range) 동안 경로(http_route)별 P95 응답시간 상위 30개. histogram_quantile(0.95) by (le, http_route). ⚠ 메트릭/라벨 이름은 OTel→Mimir 변환 추정값 — 데이터 유입 후 http_route 라벨명 확인 후 교정.",
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "continuous-GrYlRd"
+          },
+          "custom": {
+            "align": "auto",
+            "cellOptions": {
+              "mode": "gradient",
+              "type": "color-background"
+            }
+          },
+          "unit": "ms"
+        }
+      },
+      "gridPos": {
+        "h": 12,
+        "w": 12,
+        "x": 12,
+        "y": 12
+      },
+      "id": 8,
+      "options": {
+        "showHeader": true,
+        "sortBy": [
+          {
+            "desc": true,
+            "displayName": "P95 응답시간(ms)"
+          }
+        ]
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "mimir-ds"
+          },
+          "expr": "topk(30, histogram_quantile(0.95, sum by (le, http_target, http_method) (rate(http_server_duration_milliseconds_bucket{service_name=\"artist-back\", deployment_environment=\"$env\", http_method!=\"OPTIONS\"}[$__range]))) and (sum by (http_target, http_method) (rate(http_server_duration_milliseconds_count{service_name=\"artist-back\", deployment_environment=\"$env\", http_method!=\"OPTIONS\"}[$__range])) > 0))",
+          "format": "table",
+          "instant": true,
+          "refId": "A"
+        }
+      ],
+      "title": "응답시간 P95 Top 30 (경로별)",
+      "transformations": [
+        {
+          "id": "organize",
+          "options": {
+            "excludeByName": {
+              "Time": true
+            },
+            "renameByName": {
+              "Value": "P95 응답시간(ms)",
+              "http_method": "메서드",
+              "http_target": "경로"
+            }
+          }
+        }
+      ],
+      "type": "table"
+    }
+  ],
+  "refresh": "",
+  "schemaVersion": 42,
+  "tags": [
+    "artist-back",
+    "lgtm",
+    "mimir",
+    "metrics",
+    "apm"
+  ],
+  "templating": {
+    "list": [
+      {
+        "current": {
+          "text": "DEV",
+          "value": "DEV"
+        },
+        "label": "환경",
+        "name": "env",
+        "options": [
+          {
+            "selected": true,
+            "text": "DEV",
+            "value": "DEV"
+          },
+          {
+            "selected": false,
+            "text": "OPS",
+            "value": "OPS"
+          }
+        ],
+        "query": "DEV,OPS",
+        "type": "custom"
+      }
+    ]
+  },
+  "time": {
+    "from": "now-6h",
+    "to": "now"
+  },
+  "title": "Artists Dev — Metrics (APM)",
+  "uid": "artists-dev-metrics",
+  "version": 6
+}

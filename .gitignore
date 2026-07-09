@@ -11,3 +11,6 @@ grafana/data/
 
 # OS noise
 .DS_Store
+
+# IDE
+.idea/

@@ -1,0 +1,363 @@
+{
+  "annotations": {
+    "list": []
+  },
+  "description": "artist-back 요청/에러 로그(nginx·Django→Loki). 카운트는 line-filter로 가볍게. 집계(지연/에러율)는 'Artists Ops — Metrics' 대시보드(Mimir) 참조 — 공유 LGTM에 고카디널리티 LogQL 집계 금지(OOM).",
+  "editable": true,
+  "graphTooltip": 1,
+  "id": null,
+  "links": [
+    {
+      "icon": "external link",
+      "targetBlank": false,
+      "title": "→ Metrics 대시보드 (APM·지연·Top 30)",
+      "tooltip": "요청률·에러율·지연·경로별 Top 30",
+      "type": "link",
+      "url": "/d/artists-ops-metrics"
+    }
+  ],
+  "panels": [
+    {
+      "datasource": {
+        "type": "loki",
+        "uid": "loki-ds"
+      },
+      "gridPos": {
+        "h": 4,
+        "w": 8,
+        "x": 0,
+        "y": 0
+      },
+      "id": 1,
+      "options": {
+        "colorMode": "value",
+        "graphMode": "area",
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ]
+        }
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "loki",
+            "uid": "loki-ds"
+          },
+          "expr": "sum(count_over_time({service_name=\"artist-back\", env=\"$env\", source=\"nginx\"} [$__range]))",
+          "queryType": "instant",
+          "refId": "A"
+        }
+      ],
+      "title": "총 요청 수 (nginx)",
+      "type": "stat"
+    },
+    {
+      "datasource": {
+        "type": "loki",
+        "uid": "loki-ds"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "thresholds"
+          },
+          "thresholds": {
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              },
+              {
+                "color": "yellow",
+                "value": 1
+              }
+            ]
+          }
+        }
+      },
+      "gridPos": {
+        "h": 4,
+        "w": 8,
+        "x": 8,
+        "y": 0
+      },
+      "id": 2,
+      "options": {
+        "colorMode": "background",
+        "graphMode": "area",
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ]
+        }
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "loki",
+            "uid": "loki-ds"
+          },
+          "expr": "sum(count_over_time({service_name=\"artist-back\", env=\"$env\", source=\"nginx\"} |~ `\"status\": \"4` [$__range]))",
+          "queryType": "instant",
+          "refId": "A"
+        }
+      ],
+      "title": "4xx 응답",
+      "type": "stat"
+    },
+    {
+      "datasource": {
+        "type": "loki",
+        "uid": "loki-ds"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "thresholds"
+          },
+          "thresholds": {
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              },
+              {
+                "color": "red",
+                "value": 1
+              }
+            ]
+          }
+        }
+      },
+      "gridPos": {
+        "h": 4,
+        "w": 8,
+        "x": 16,
+        "y": 0
+      },
+      "id": 3,
+      "options": {
+        "colorMode": "background",
+        "graphMode": "area",
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ]
+        }
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "loki",
+            "uid": "loki-ds"
+          },
+          "expr": "sum(count_over_time({service_name=\"artist-back\", env=\"$env\", source=\"nginx\"} |~ `\"status\": \"5` [$__range]))",
+          "queryType": "instant",
+          "refId": "A"
+        }
+      ],
+      "title": "5xx 응답 (장애)",
+      "type": "stat"
+    },
+    {
+      "datasource": {
+        "type": "loki",
+        "uid": "loki-ds"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "custom": {
+            "drawStyle": "bars",
+            "fillOpacity": 70,
+            "stacking": {
+              "mode": "normal"
+            }
+          }
+        }
+      },
+      "gridPos": {
+        "h": 7,
+        "w": 24,
+        "x": 0,
+        "y": 4
+      },
+      "id": 4,
+      "targets": [
+        {
+          "datasource": {
+            "type": "loki",
+            "uid": "loki-ds"
+          },
+          "expr": "sum(count_over_time({service_name=\"artist-back\", env=\"$env\", source=\"nginx\"} |~ `\"status\": \"2` [$__interval]))",
+          "legendFormat": "2xx",
+          "queryType": "range",
+          "refId": "A"
+        },
+        {
+          "datasource": {
+            "type": "loki",
+            "uid": "loki-ds"
+          },
+          "expr": "sum(count_over_time({service_name=\"artist-back\", env=\"$env\", source=\"nginx\"} |~ `\"status\": \"4` [$__interval]))",
+          "legendFormat": "4xx",
+          "queryType": "range",
+          "refId": "B"
+        },
+        {
+          "datasource": {
+            "type": "loki",
+            "uid": "loki-ds"
+          },
+          "expr": "sum(count_over_time({service_name=\"artist-back\", env=\"$env\", source=\"nginx\"} |~ `\"status\": \"5` [$__interval]))",
+          "legendFormat": "5xx",
+          "queryType": "range",
+          "refId": "C"
+        }
+      ],
+      "title": "요청 추이 (2xx / 4xx / 5xx)",
+      "type": "timeseries"
+    },
+    {
+      "datasource": {
+        "type": "loki",
+        "uid": "loki-ds"
+      },
+      "gridPos": {
+        "h": 10,
+        "w": 24,
+        "x": 0,
+        "y": 11
+      },
+      "id": 5,
+      "options": {
+        "enableLogDetails": true,
+        "showTime": true,
+        "sortOrder": "Descending",
+        "wrapLogMessage": true
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "loki",
+            "uid": "loki-ds"
+          },
+          "expr": "{service_name=\"artist-back\", env=\"$env\", source=\"nginx\"} | json | line_format `{{.method}} {{.status}} {{printf \"%6ss\" .request_time}} {{.request_uri}} | {{.email}} | v{{.app_version}}`",
+          "maxLines": 500,
+          "queryType": "range",
+          "refId": "A"
+        }
+      ],
+      "title": "요청 로그 (nginx) — method / status / 시간 / URI / 유저",
+      "type": "logs"
+    },
+    {
+      "datasource": {
+        "type": "loki",
+        "uid": "loki-ds"
+      },
+      "gridPos": {
+        "h": 9,
+        "w": 12,
+        "x": 0,
+        "y": 21
+      },
+      "id": 6,
+      "options": {
+        "enableLogDetails": true,
+        "showTime": true,
+        "sortOrder": "Descending",
+        "wrapLogMessage": true
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "loki",
+            "uid": "loki-ds"
+          },
+          "expr": "{service_name=\"artist-back\", env=\"$env\", source=\"nginx\"} |~ `\"status\": \"[45]` | json | line_format `{{.status}} {{.method}} {{.request_uri}} | {{.email}} | body={{.request_body}}`",
+          "maxLines": 300,
+          "queryType": "range",
+          "refId": "A"
+        }
+      ],
+      "title": "에러 요청만 (4xx / 5xx) — payload 포함",
+      "type": "logs"
+    },
+    {
+      "datasource": {
+        "type": "loki",
+        "uid": "loki-ds"
+      },
+      "gridPos": {
+        "h": 9,
+        "w": 12,
+        "x": 12,
+        "y": 21
+      },
+      "id": 7,
+      "options": {
+        "enableLogDetails": true,
+        "showTime": true,
+        "sortOrder": "Descending",
+        "wrapLogMessage": true
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "loki",
+            "uid": "loki-ds"
+          },
+          "expr": "{service_name=\"artist-back\", env=\"$env\", source=\"django\"} |~ `(?i)error|exception|traceback`",
+          "maxLines": 300,
+          "queryType": "range",
+          "refId": "A"
+        }
+      ],
+      "title": "Django 앱 로그 (에러/예외)",
+      "type": "logs"
+    }
+  ],
+  "refresh": "",
+  "schemaVersion": 42,
+  "tags": [
+    "artist-back",
+    "lgtm",
+    "loki",
+    "logs"
+  ],
+  "templating": {
+    "list": [
+      {
+        "current": {
+          "selected": true,
+          "text": "OPS",
+          "value": "OPS"
+        },
+        "label": "환경",
+        "name": "env",
+        "options": [
+          {
+            "selected": false,
+            "text": "DEV",
+            "value": "DEV"
+          },
+          {
+            "selected": true,
+            "text": "OPS",
+            "value": "OPS"
+          }
+        ],
+        "query": "DEV,OPS",
+        "type": "custom"
+      }
+    ]
+  },
+  "time": {
+    "from": "now-1h",
+    "to": "now"
+  },
+  "title": "Artists Ops — Logs",
+  "uid": "artists-ops-logs",
+  "version": 2
+}
