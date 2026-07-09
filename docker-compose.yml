@@ -30,7 +30,7 @@ services:
           memory: 256m
 
   tempo:
-    image: grafana/tempo:latest
+    image: grafana/tempo:2.8.1  # latest(v3.0)는 설정 스키마가 달라 기동 실패 — 버전 고정
     environment:
       - AWS_ACCESS_KEY_ID=${AWS_ACCESS_KEY_ID}
       - AWS_SECRET_ACCESS_KEY=${AWS_SECRET_ACCESS_KEY}
