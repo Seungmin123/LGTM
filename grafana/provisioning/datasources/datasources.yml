@@ -20,6 +20,8 @@ datasources:
     access: proxy
     url: http://mimir:9009/prometheus
     isDefault: true
+    jsonData:
+      timeInterval: "60s"  # Micrometer OTLP push 주기. 미설정 시 Grafana가 15s로 가정해 $__rate_interval 창이 좁아져 rate 패널이 No Data가 됨
 
   - name: Tempo
     type: tempo
